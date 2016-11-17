@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Calculator React</title>
+    <link rel="stylesheet" href="dist/all.css" media="screen" title="no title">
+  </head>
+  <body>
+    <div id="calc">
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/react/0.14.0-rc1/react.js"></script>
+    <script src="https://cdn.jsdelivr.net/react/0.14.0-rc1/react-dom.js"></script>
+    <!-- <script src="app.js" charset="utf-8"></script> -->
+
+
+<script type="text/javascript">
+
+  // Functions to limit total length to nine characters in the total display.
+  var myNamespace = {};
+
+  myNamespace.round = function(number, precision) {
+    var factor = Math.pow(10, precision);
+    var tempNumber = number * factor;
+    var roundedTempNumber = Math.round(tempNumber);
+    return roundedTempNumber / factor;
+  };
+
+  function roundDec(c) {
+  if(Math.round(c).toString().length === 9) {
+    runningTotal =	Math.round(c);
+  } else if (Math.round(c).toString().length > 9) {
+      number = "";
+      runningTotal = "Err:"
+    } else {
+        var x = 8 - Math.round(c).toString().length;
+        runningTotal = myNamespace.round(c, x).toString();
+      }
+  }
+
+  // Tests to see if input is too long, so it doesn't break out of container.
+  var testNumLength = function(num) {
+  if (num.length > 9) {
+        roundDec(num);
+      } else {
+        runningTotal = num
+        number = num
+      }
+  };
+
+
+  var clear = function(){
+      if (number.length === 0) operator = '';
+      number = '';
+      runningTotal = '0';
+      state.buttons[0] = {key: 1, value: 'AC', id: 'clearall', purpose: 'clearall'}
+    }
+
+  var clearall = function(){
+      operator = '';
+      showOperator = ''
+      newnumber = '';
+      runningTotal = '0';
+      number = '';
+    }
+
+
+
+  var TotalDiv = React.createClass({
+
+    render: function(){
+      return (
+        React.createElement('div', {},
+          React.createElement('div', {className: 'operator'}, showOperator),
+          React.createElement('div', {className: 'total'},runningTotal))
+      )
+    }
+  })
+
+  var CalcButton = React.createClass({
+    propTypes: {
+      value: React.PropTypes.string.isRequired,
+    },
+    onMouseDown: function(e){
+      if(e.target.id === 'equals')  e.target.style.background = '#EDE253';
+      else {
+        e.target.style.background = '-webkit-gradient(linear, left top, left bottom, from(#1F1F1F), to(#141414))';
+      }
+    },
+    onMouseUp: function(e){
+      e.target.style.background = '';
+    },
+    totalEquals: function(){
+      // Parse numbers to do Math.
+      number = parseFloat (number)
+      newnumber = parseFloat(newnumber)
+      // Total container for answer.
+      var total = 0;
+      // Check operator.
+      if(operator === '+') {
+          total = newnumber + number;
+      } else if (operator === '-') {
+          total = newnumber - number;
+      } else if (operator === '/') {
+          total = newnumber / number;
+      } else if (operator === '*') {
+          total = newnumber * number;
+      }
+    // Tests for length of total and sets totaldiv value for user.
+    testNumLength(total.toString());
+
+    // Stores total and resets newnumber for chained operations.
+    number = total.toString();
+    // runningTotal = number;
+    newnumber = '';
+    showOperator = '='
+  },
+
+    handleClick: function(){
+      // If button is a number.
+      if(this.props.purpose === 'number'){
+        if (showOperator === '=') { clearall(); }
+        if (number === '0'){
+          number = this.props.value;
+          runningTotal = this.props.value;
+        } else {
+          number += this.props.value;
+          runningTotal = number;
+        }
+        state.buttons[0] = {key: 1, value: 'C', id: 'clearall', purpose: 'clear'}
+      } else if (this.props.purpose === 'operation'){
+          if (this.props.id === 'percent'){
+            if (number.length > 0){
+              operator = '%';
+              // Variable to store total.
+              var percentTotal;
+              // Parse number to use in equation.
+              number = parseFloat(number);
+              // Check if newnumber has no stored value to avoid parse error (NaN)
+              if (newnumber.length === 0){
+                percentTotal = number / 100;
+              } else {
+              // Otherwise parse newnumber as well and find percentage.
+                newnumber = parseFloat(newnumber)
+                percentTotal = (newnumber / 100) * number;
+              }
+              // Stores total and resets newnumber for chained operations.
+              number = percentTotal.toString();
+              testNumLength(number);
+              newnumber = '';
+            }
+          }
+          else if (number.length > 0 && newnumber.length > 0) {
+              this.totalEquals();
+              operator = this.props.value;
+              showOperator = operator;
+              newnumber = number;
+              number = "";
+            } else {
+              operator = this.props.value;;
+              showOperator = operator;
+              newnumber = number;
+              number = "";
+            }
+      } else if (this.props.purpose === 'clearall') {
+          clearall();
+      } else if (this.props.purpose === 'clear'){
+          clear();
+      } else if (this.props.purpose === 'plusMinus') {
+        // Function checks which input is currently displayed in order to properly
+        // assign the positive/negative attribute to the correct stored value.
+        if(number === runningTotal) number = (parseFloat(runningTotal) * -1).toString();
+        if(newnumber === runningTotal) newnumber = (parseFloat(runningTotal) * -1).toString();
+
+        // Assigns pos/neg attribute to what the user sees.
+        runningTotal = (parseFloat(runningTotal) * -1).toString();
+      } else {
+          if (number.length === 0 && newnumber.length === 0) {
+            runningTotal = '0';
+          }
+          else {
+            this.totalEquals();
+        }
+      }
+      updateTotalDiv()
+    },
+
+    render: function(){
+
+      return (
+        React.createElement('li', {className: 'button ' + this.props.purpose, id: this.props.id, onClick: this.handleClick, onMouseDown: this.onMouseDown, onMouseUp: this.onMouseUp }, this.props.value)
+      )
+    }
+  })
+
+  var ButtonContainer = React.createClass({
+    propTypes: {
+      buttons: React.PropTypes.array.isRequired,
+    },
+
+    render: function(){
+      var buttonElements = this.props.buttons
+        .map(function(button){ return React.createElement(CalcButton, button) })
+
+      return (
+        React.createElement('div', {},
+          React.createElement(TotalDiv, {}),
+          React.createElement('ul', {className: 'buttonElements'}, buttonElements)
+        )
+      )
+    }
+  })
+
+
+  var number = '',
+      newnumber = '',
+      runningTotal = '0'
+      operator = ''
+      showOperator = '';
+
+
+  function updateTotalDiv(button) {
+    setState({ TotalDiv: runningTotal });
+  }
+
+  // The app's complete current state
+var state = {};
+
+// Make the given changes to the state and perform any required housekeeping
+function setState(changes) {
+  Object.assign(state, changes);
+
+
+  ReactDOM.render(
+    React.createElement(ButtonContainer, Object.assign({}, state, {
+        onNewChange: updateTotalDiv,
+    })),
+    document.getElementById('calc')
+  );
+}
+
+// Set initial data
+setState({
+  buttons: [
+        {key: 1, value: 'AC', id: 'clearall', purpose: 'clearall'},
+        {key: 2, value: '+/-', id: 'plusMinus', purpose: 'plusMinus'},
+        {key: 3, value: '%', id: 'percent', purpose: 'operation'},
+        {key: 4, value: '/', id:'divide', purpose: 'operation'},
+        {key: 5, value: '1', id: '1', purpose: 'number'},
+        {key: 6, value: '2', id: '2', purpose: 'number'},
+        {key: 7, value: '3', id: '3', purpose: 'number'},
+        {key: 8, value: '*', id:'multi', purpose: 'operation'},
+        {key: 9, value: '4', id: '4', purpose: 'number'},
+        {key: 10, value: '5', id: '5', purpose: 'number'},
+        {key: 11, value: '6', id: '6', purpose: 'number'},
+        {key: 12, value: '-', id:'minus', purpose: 'operation'},
+        {key: 13, value: '7', id: '7', purpose: 'number'},
+        {key: 14, value: '8', id: '8', purpose: 'number'},
+        {key: 15, value: '9', id: '9', purpose: 'number'},
+        {key: 16, value: '+', id:'plus', purpose: 'operation'},
+        {key: 17, value: '0', id: 'zero', purpose: 'number'},
+        {key: 18, value: '.', id: 'dot', purpose: 'number'},
+        {key: 19, value: '=', id: 'equals', purpose: 'equals'}
+      ]
+});
+
+
+</script>
+
+</body>
+</html>
